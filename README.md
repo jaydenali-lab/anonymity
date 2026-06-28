@@ -26,7 +26,7 @@ Anonymous mode does the following:
   particles hidden.
 - **Abilities** — bind any of 15 abilities to the Sneak key and the swap-hands (F)
   key (in `config.yml`), each on a cooldown:
-  - *Combat:* `tether`, `empowered_strike`, `chain_lightning`, `venom_burst`, `ground_slam`
+  - *Combat:* `tether`, `empowered_strike`, `chain_lightning`, `venom_burst`, `ground_slam`, `stun`
   - *Mobility:* `super_leap`, `shadow_blink`, `grappling_hook`, `speed_surge`, `disengage`
   - *Trickster:* `vanish`, `smoke_bomb`, `decoy_clone`, `mimic`, `mark_for_death`
 - **Disguise armour** — your armour is replaced with a trimmed netherite set

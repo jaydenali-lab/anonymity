@@ -50,18 +50,22 @@ effects:
 # trigger one ability of your choice. Set the ability id for each below.
 #
 # Available abilities:
-#   combat:    tether, empowered_strike, chain_lightning, venom_burst, ground_slam
+#   combat:    tether, empowered_strike, chain_lightning, venom_burst, ground_slam, stun
 #   mobility:  super_leap, shadow_blink, grappling_hook, speed_surge, disengage
 #   trickster: vanish, smoke_bomb, decoy_clone, mimic, mark_for_death
+#
+# stun: after activating, your next melee hit roots the target in place for
+#       1.5 seconds inside a cage of chain particles.
 abilities:
-  sneak: ground_slam
+  sneak: stun
   swap-hand: tether
   cooldown-ms: 2500
 
-# Tuning for the tether ability specifically.
+# Tuning for the tether ability specifically. The pull is a fast fishing-rod
+# style yank straight back to you.
 tether:
   speed: 1.8           # projectile launch speed
-  pull-strength: 1.0   # multiplier on the yank (scaled by distance)
+  pull-strength: 1.3   # multiplier on the yank (scaled by distance)
 
 # Replace the player's armour with a trimmed netherite set while anonymous,
 # restoring their own armour when they leave anonymous mode.

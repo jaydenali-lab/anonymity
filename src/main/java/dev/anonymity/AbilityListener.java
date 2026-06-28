@@ -3,11 +3,14 @@ package dev.anonymity;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -52,6 +55,7 @@ final class AbilityListener implements Listener {
     private final Map<UUID, Long> cooldownSneak = new java.util.HashMap<>();
     private final Map<UUID, Long> cooldownSwap = new java.util.HashMap<>();
     private final Map<UUID, Long> empoweredUntil = new java.util.HashMap<>();
+    private final Map<UUID, Long> stunCharge = new java.util.HashMap<>();
     private final Map<UUID, Long> noFallUntil = new java.util.HashMap<>();
     private final Map<UUID, Mark> marks = new java.util.HashMap<>();
 
@@ -69,6 +73,7 @@ final class AbilityListener implements Listener {
         register("chain_lightning", "combat", this::chainLightning);
         register("venom_burst", "combat", this::venomBurst);
         register("ground_slam", "combat", this::groundSlam);
+        register("stun", "combat", this::armStun);
         // Mobility
         register("super_leap", "mobility", this::superLeap);
         register("shadow_blink", "mobility", this::shadowBlink);
@@ -171,6 +176,71 @@ final class AbilityListener implements Listener {
             enemy.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 100, 1));
             enemy.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 80, 0));
         }
+    }
+
+    /** Arms the player's next melee hit to root the target in place. */
+    private void armStun(Player player) {
+        stunCharge.put(player.getUniqueId(), System.currentTimeMillis() + 6000L);
+        sound(player, "minecraft:block.chain.place", 1.0f, 1.4f);
+        sound(player, "minecraft:block.enchantment_table.use", 0.7f, 1.6f);
+        manager.dustBurst(player.getLocation().add(0, 1, 0), 20);
+        player.sendMessage("§5Your next hit will bind your target in place.");
+    }
+
+    /** Roots a victim where they stand for 1.5s inside a cage of chain particles. */
+    private void applyStun(LivingEntity victim) {
+        final int ticks = 30; // 1.5 seconds
+        final Location lock = victim.getLocation().clone();
+        victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks, 250, false, false, false));
+        final boolean mob = victim instanceof Mob;
+        if (mob) {
+            ((Mob) victim).setAI(false);
+        }
+        victim.getWorld().playSound(lock, "minecraft:block.chain.place", 1.2f, 0.7f);
+        victim.getWorld().playSound(lock, "minecraft:entity.leash_knot.place", 1.0f, 0.8f);
+
+        new BukkitRunnable() {
+            int t = 0;
+            @Override
+            public void run() {
+                if (t++ >= ticks || victim.isDead() || !victim.isValid()) {
+                    if (mob && victim.isValid()) {
+                        ((Mob) victim).setAI(true);
+                    }
+                    cancel();
+                    return;
+                }
+                // Hold them at the locked spot but let them look around.
+                Location current = victim.getLocation();
+                lock.setYaw(current.getYaw());
+                lock.setPitch(current.getPitch());
+                if (current.distanceSquared(lock) > 0.0025) {
+                    victim.teleport(lock);
+                }
+                victim.setVelocity(new Vector(0, 0, 0));
+                chainCage(lock);
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    /** A cage of red chain-like particles around a point. */
+    private void chainCage(Location center) {
+        Particle dust = manager.dustParticle();
+        if (dust == null) {
+            return;
+        }
+        Particle.DustOptions options = manager.dustOptions();
+        double radius = 0.55;
+        for (int i = 0; i < 4; i++) {
+            double angle = i * Math.PI / 2 + (center.getYaw() == 0 ? 0 : 0);
+            double x = Math.cos(angle) * radius;
+            double z = Math.sin(angle) * radius;
+            for (double y = 0.1; y <= 2.0; y += 0.4) {
+                center.getWorld().spawnParticle(dust, center.getX() + x, center.getY() + y, center.getZ() + z,
+                        1, 0, 0, 0, 0, options);
+            }
+        }
+        center.getWorld().spawnParticle(Particle.CRIT, center.clone().add(0, 1.0, 0), 4, 0.4, 0.6, 0.4, 0.0);
     }
 
     private void groundSlam(Player player) {
@@ -355,11 +425,12 @@ final class AbilityListener implements Listener {
         if (distance < 0.1) {
             return;
         }
-        double base = Math.max(0.8, Math.min(distance * 0.28, 2.6));
-        Vector velocity = toShooter.normalize().multiply(base * plugin.getConfig().getDouble("tether.pull-strength", 1.0));
-        velocity.setY(Math.max(velocity.getY(), 0.0) + 0.35);
+        // Fast fishing-rod style yank: strong, distance-scaled, low arc.
+        double base = Math.max(1.6, Math.min(distance * 0.5, 4.5));
+        Vector velocity = toShooter.normalize().multiply(base * plugin.getConfig().getDouble("tether.pull-strength", 1.3));
+        velocity.setY(velocity.getY() * 0.4 + 0.2);
         target.setVelocity(velocity);
-        target.getWorld().playSound(target.getLocation(), "minecraft:entity.fishing_bobber.retrieve", 1.0f, 0.7f);
+        target.getWorld().playSound(target.getLocation(), "minecraft:entity.fishing_bobber.retrieve", 1.0f, 0.6f);
         manager.dustBurst(target.getLocation().add(0, 1, 0), 16);
     }
 
@@ -388,6 +459,12 @@ final class AbilityListener implements Listener {
         if (mark != null && now < mark.until() && mark.marker().equals(attacker.getUniqueId())) {
             event.setDamage(event.getDamage() + 4.0);
             manager.dustBurst(victim.getLocation().add(0, 1, 0), 10);
+        }
+
+        Long stunArmed = stunCharge.get(attacker.getUniqueId());
+        if (stunArmed != null && now < stunArmed) {
+            stunCharge.remove(attacker.getUniqueId());
+            applyStun(victim);
         }
     }
 
