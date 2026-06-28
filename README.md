@@ -1,7 +1,11 @@
 # Anonymity
 
-A Paper/Spigot plugin that adds a single command, **`/anonymous`** (alias `/anon`),
-which toggles "anonymous mode" on yourself:
+A Paper/Spigot plugin built around the **Fragment Of Anonymity** — a red-named
+amethyst shard. Right-click it to toggle "anonymous mode" on yourself. Operators
+get one with `/fragment`. The Fragment never drops on death (it vanishes, like
+Curse of Vanishing but without the visible enchant).
+
+Anonymous mode does the following:
 
 - **Scrambled name** — your name renders as ever-changing *unintelligible letters*
   (the Minecraft magic/obfuscated formatting code) in chat, the tab list and death
@@ -24,7 +28,7 @@ which toggles "anonymous mode" on yourself:
 - **Anonymous kills** — when you kill someone, the death message shows your
   scrambled name instead of your username.
 
-Run `/anonymous` again to turn everything back off.
+Right-click the Fragment again to turn everything back off.
 
 ## Building
 

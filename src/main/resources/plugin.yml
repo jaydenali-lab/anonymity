@@ -5,12 +5,14 @@ api-version: '1.21'
 description: "Scrambled name, hidden skin, enchantment aura and obfuscated kill messages."
 author: Anonymity
 commands:
-  anonymous:
-    description: Toggle anonymous mode - scrambled name, hidden skin and an enchantment aura.
-    usage: /anonymous
-    aliases: [anon]
-    permission: anonymity.use
+  fragment:
+    description: Receive a Fragment Of Anonymity.
+    usage: /fragment
+    permission: anonymity.give
 permissions:
   anonymity.use:
-    description: Allows toggling anonymous mode on yourself. Operators only by default.
+    description: Allows using the Fragment Of Anonymity to toggle anonymous mode.
+    default: true
+  anonymity.give:
+    description: Allows giving yourself a Fragment Of Anonymity.
     default: op

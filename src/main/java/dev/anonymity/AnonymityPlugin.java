@@ -16,11 +16,12 @@ public final class AnonymityPlugin extends JavaPlugin {
 
         this.manager = new AnonymityManager(this);
 
-        AnonymousCommand command = new AnonymousCommand(manager);
-        getCommand("anonymous").setExecutor(command);
+        FragmentItem fragment = new FragmentItem(this);
+        getCommand("fragment").setExecutor(new FragmentCommand(fragment));
 
         getServer().getPluginManager().registerEvents(new AnonymityListener(manager), this);
         getServer().getPluginManager().registerEvents(new DashListener(manager), this);
+        getServer().getPluginManager().registerEvents(new FragmentListener(manager, fragment), this);
 
         manager.startTickTask();
 
