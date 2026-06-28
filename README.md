@@ -7,7 +7,7 @@ which toggles "anonymous mode" on yourself:
   (the Minecraft magic/obfuscated formatting code) in chat, the tab list and above
   your head.
 - **Hidden skin** — your skin is swapped to
-  [this one](https://namemc.com/skin/35e202697eb4000e) so nobody recognises you.
+  [_lotu's skin](https://namemc.com/skin/35e202697eb4000e) so nobody recognises you.
 - **Enchantment aura** — enchantment-table particles continuously pour off your body.
 - **Anonymous kills** — when you kill someone, the death message shows your
   scrambled name instead of your username.
