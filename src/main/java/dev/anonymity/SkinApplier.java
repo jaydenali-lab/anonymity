@@ -95,18 +95,20 @@ final class SkinApplier {
 
     /** Resolves the live {@link GameProfile} of an online player via reflection. */
     private GameProfile profileOf(Player player) {
-        // Try CraftPlayer#getProfile(), then the NMS handle's profile accessor.
-        // Method names differ across versions, so we match on the return type.
-        GameProfile profile = findGameProfile(player);
-        if (profile != null) {
-            return profile;
-        }
+        // Prefer the NMS handle's profile: that is the exact instance the server
+        // serialises into the player-info packet, so mutating it is what other
+        // clients actually see. CraftPlayer#getProfile() can return a copy on
+        // some versions, which would silently make the skin change a no-op.
         try {
             Object handle = player.getClass().getMethod("getHandle").invoke(player);
-            return findGameProfile(handle);
-        } catch (ReflectiveOperationException e) {
-            return null;
+            GameProfile fromHandle = findGameProfile(handle);
+            if (fromHandle != null) {
+                return fromHandle;
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Fall back to the CraftPlayer below.
         }
+        return findGameProfile(player);
     }
 
     private GameProfile findGameProfile(Object holder) {
