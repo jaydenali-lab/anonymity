@@ -68,8 +68,9 @@ These are Bukkit-API constraints, not bugs:
 
 - **You won't see your own new skin** until you reconnect — that's a vanilla client
   limitation. Everyone *else* sees it immediately.
-- **The over-head nameplate is prefixed**, not fully replaced. Bukkit can't replace
-  the entity name tag without a packet library, so the scrambled token is prepended
-  to your name via a scoreboard team. Chat, tab and death messages are fully
-  scrambled. For a fully-replaced nameplate, add ProtocolLib and send a custom
-  player-info packet.
+- **The over-head nameplate is hidden** while anonymous, not replaced. Bukkit can't
+  replace the entity name tag without a packet library, so rather than leak your real
+  username the nametag is hidden entirely (scoreboard team with
+  `NAME_TAG_VISIBILITY = NEVER`). Chat, the tab list and death messages still show the
+  animated scrambled name. For a fully-replaced (still-visible) nameplate, add
+  ProtocolLib and send a custom player-info packet.

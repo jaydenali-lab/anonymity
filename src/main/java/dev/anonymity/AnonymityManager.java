@@ -79,7 +79,7 @@ public final class AnonymityManager {
         String originalDisplay = player.getDisplayName();
         String originalList = player.getPlayerListName();
 
-        String teamName = applyNameplate(player, scrambled);
+        String teamName = applyNameplate(player);
 
         active.put(player.getUniqueId(), new AnonymousState(
                 token, scrambled, originalTextures, originalDisplay, originalList, teamName));
@@ -157,13 +157,15 @@ public final class AnonymityManager {
     // -------------------------------------------------------------- nameplate
 
     /**
-     * Prefixes the over-head name with the scrambled token via a scoreboard
-     * team. (Fully replacing the nameplate text isn't possible through the
-     * Bukkit API without a packet library, so we prepend the magic token.)
+     * Hides the player's over-head nametag entirely while anonymous, via a
+     * scoreboard team with {@code NAME_TAG_VISIBILITY = NEVER}. (The Bukkit API
+     * can't replace the nameplate text without a packet library, so rather than
+     * leak the real username we hide it; the scrambled name still shows in chat,
+     * the tab list and death messages.)
      *
      * @return the created team name, for later cleanup.
      */
-    private String applyNameplate(Player player, String scrambled) {
+    private String applyNameplate(Player player) {
         Scoreboard scoreboard = player.getScoreboard();
         String teamName = "anon_" + Integer.toHexString(player.getUniqueId().hashCode());
         if (teamName.length() > 16) {
@@ -174,7 +176,7 @@ public final class AnonymityManager {
         if (team == null) {
             team = scoreboard.registerNewTeam(teamName);
         }
-        team.setPrefix(scrambled + " ");
+        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
         if (!team.hasEntry(player.getName())) {
             team.addEntry(player.getName());
         }
