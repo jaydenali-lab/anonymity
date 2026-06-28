@@ -8,11 +8,15 @@ which toggles "anonymous mode" on yourself:
   messages. Your over-head nametag is hidden so your real username never leaks.
 - **Hidden skin** — your skin is swapped to
   [_lotu's skin](https://namemc.com/skin/35e202697eb4000e) so nobody recognises you.
-- **Red-cloud aura** — red dust particles continuously pour off your body.
+- **Enchantment aura** — enchantment-table particles continuously pour off your body.
+- **Transform cutscene** — toggling spins red cloud particles around you like a
+  tornado that converges and then explodes as the change lands (and plays in
+  reverse when you turn it off), with layered wind-up/explosion sounds.
 - **Combat buffs** — infinite **Strength II** and **Speed II**, with the potion
   particles hidden.
 - **Sneak to dash** — tap shift to dash forward (a ~1 second velocity burst in the
-  direction you're looking), with a short cooldown.
+  direction you're looking) with a whoosh sound and a trail of red particles
+  following you; short cooldown.
 - **Disguise armour** — your armour is replaced with a trimmed netherite set
   (Vex/Raiser/Tide trims, Redstone material, Protection/Unbreaking/Mending, and
   Feather Falling on the boots) and your own armour is restored when you leave

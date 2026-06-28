@@ -44,6 +44,6 @@ final class DashListener implements Listener {
         Vector direction = player.getLocation().getDirection().normalize().multiply(manager.dashPower());
         direction.setY(Math.max(direction.getY() * 0.5, 0.0) + manager.dashVertical());
         player.setVelocity(direction);
-        manager.dashPuff(player);
+        manager.dashEffects(player);
     }
 }
