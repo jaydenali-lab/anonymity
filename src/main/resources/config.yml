@@ -1,0 +1,33 @@
+# Anonymity configuration.
+
+# The skin applied while a player is anonymous.
+# These are a Mojang-signed texture (value + signature) so other players
+# actually render the skin. This pair corresponds to:
+#   https://namemc.com/skin/35e202697eb4000e
+# To use a different skin, generate a new signed pair (e.g. via https://mineskin.org)
+# and paste the "value" and "signature" here.
+skin:
+  value: "ewogICJ0aW1lc3RhbXAiIDogMTc3MjQ1NjcwNDI0OCwKICAicHJvZmlsZUlkIiA6ICJkZWFmNjAxNDU1NDY0MGU5YWJmNmUyMWZiZDgyZDU2NiIsCiAgInByb2ZpbGVOYW1lIiA6ICJBaWxvcnlLIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzE3ZDQwMzIzYzA1MzRlZjg1NzQyZjZhZDcxMmQ1N2RmZDc4MjljYWVjOGQwYjk2YWM1MGVhOTNjYmRkYTRlOTMiCiAgICB9CiAgfQp9"
+  signature: "ec7ZYRH3tPB8cqWBUESKifP1KdluLeNvx7KnbRdaMJcpoDu3M+s+JviU5P7gnWtT0ZU/O2pXEpJlQ/7g1KmgVatbMmDVaow9m3GEjMRtgWiRc91nnBiDWrzcZRCBA/zH3nm3WhPhNe3m0v6Q1nSoUQ7xBbV2oP1CsuXqLQfh3i4uuSAx7Jf+4TvRw9etyFgBZIVjyZhn9zLYbnzUkuQVvhIWDPb99GqP1j/Iras7LWww24rxLeHmRoPtYpTgMAl9+6ZoXHwSxjVohH3THwbW/XovTDCjotXaUbNqfNMUHnEhDwHDa6PCX/6ctqUssRcPfOZLr6Dq2Qc0aPTJlEAaRB1BsipxiSUcnxP0CSVSOokJdpd+I/mlddv+ct0nAPOIv/Ok0q4jvJSRRBNJFMRqgPZUzLgt9QpdRWsSuv4MrLB+FULib9ygqIkaECCWu3jb/Jkd2ncFODCDEdZ5T9reHDbW0gHKx/yUfiJRhbBcN4oaK1pjo/CZZnjr/QwrMd2HRS+XEwjK0QhF4S5SmMqEZ6pLZGnxFJL5Tz4mNLR6uGa/bZ+QOTWb3teYN+hm0DVwHGbpHNGS9qu3qJtdQsQU7gRKe6MaCrlm3IfWbbS7LM1mflCDDp1wnnIcyedQ5hZsSUBDxj3LlSIQ9zJ+4myYNAwoIHYd0fCH9s7sMsRzTyw="
+
+# The scrambled ("unintelligible letters") name. It is rendered with the
+# Minecraft magic/obfuscated formatting code so the characters constantly cycle.
+name:
+  # A fresh random token of this length is generated each time a player goes
+  # anonymous, so two anonymous players never look identical.
+  min-length: 7
+  max-length: 9
+
+# The enchantment-table particle aura that surrounds an anonymous player.
+particles:
+  enabled: true
+  # How often to emit a burst, in server ticks (20 ticks = 1 second).
+  interval-ticks: 4
+  # Particles per burst.
+  count: 10
+  # Horizontal/vertical spread of the aura around the body.
+  radius: 0.6
+
+# Rewrite death messages so an anonymous killer (or victim) shows the
+# scrambled name instead of their real username.
+death-messages: true

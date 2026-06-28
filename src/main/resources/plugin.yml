@@ -1,0 +1,16 @@
+name: ${project.name}
+version: ${project.version}
+main: dev.anonymity.AnonymityPlugin
+api-version: '1.21'
+description: ${project.description}
+author: Anonymity
+commands:
+  anonymous:
+    description: Toggle anonymous mode - scrambled name, hidden skin and an enchantment aura.
+    usage: /anonymous
+    aliases: [anon]
+    permission: anonymity.use
+permissions:
+  anonymity.use:
+    description: Allows toggling anonymous mode on yourself.
+    default: true
