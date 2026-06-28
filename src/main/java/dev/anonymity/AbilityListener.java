@@ -215,7 +215,7 @@ final class AbilityListener implements Listener {
 
         RayTraceResult blockHit = player.getWorld().rayTraceBlocks(eye, dir, maxRange);
         double maxDist = blockHit != null ? eye.toVector().distance(blockHit.getHitPosition()) : maxRange;
-        RayTraceResult entityHit = player.getWorld().rayTraceEntities(eye, dir, maxDist, 0.4,
+        RayTraceResult entityHit = player.getWorld().rayTraceEntities(eye, dir, maxDist, 0.65,
                 e -> e instanceof LivingEntity && !e.equals(player));
 
         LivingEntity target = entityHit != null && entityHit.getHitEntity() instanceof LivingEntity le ? le : null;
@@ -256,20 +256,35 @@ final class AbilityListener implements Listener {
         }
     }
 
-    /** Fast fishing-rod style yank of a target straight back to the shooter. */
+    /**
+     * Reels a target all the way to the shooter: each tick it re-aims at the
+     * shooter and applies velocity with a slight lift, so the target skims over
+     * the ground (ground friction can't stall the pull) until it arrives.
+     */
     private void pullToShooter(LivingEntity target, Player shooter) {
-        Vector toShooter = shooter.getLocation().toVector().subtract(target.getLocation().toVector());
-        double distance = toShooter.length();
-        if (distance < 0.1) {
-            return;
-        }
-        // Tuned so the target lands on/near you fast, without rocketing past.
-        double base = Math.max(0.8, Math.min(distance * 0.35, 3.0));
-        Vector velocity = toShooter.normalize().multiply(base * plugin.getConfig().getDouble("tether.pull-strength", 1.1));
-        velocity.setY(velocity.getY() * 0.4 + 0.15);
-        target.setVelocity(velocity);
         target.getWorld().playSound(target.getLocation(), "minecraft:entity.fishing_bobber.retrieve", 1.0f, 0.6f);
-        manager.dustBurst(target.getLocation().add(0, 1, 0), 16);
+        final double strength = plugin.getConfig().getDouble("tether.pull-strength", 1.1);
+        new BukkitRunnable() {
+            int t = 0;
+            @Override
+            public void run() {
+                if (t++ > 25 || target.isDead() || !target.isValid() || !shooter.isOnline()) {
+                    cancel();
+                    return;
+                }
+                Vector to = shooter.getLocation().toVector().subtract(target.getLocation().toVector());
+                double dist = to.length();
+                if (dist < 1.4) {
+                    cancel(); // arrived
+                    return;
+                }
+                double speed = Math.min(0.9, 0.3 + dist * 0.22) * strength;
+                Vector velocity = to.normalize().multiply(speed);
+                velocity.setY(0.22); // gentle lift so they glide over the floor
+                target.setVelocity(velocity);
+                manager.dustBurst(target.getLocation().add(0, 1, 0), 4);
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void empoweredStrike(Player player) {
