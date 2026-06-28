@@ -20,8 +20,9 @@ public final class AnonymityPlugin extends JavaPlugin {
         getCommand("anonymous").setExecutor(command);
 
         getServer().getPluginManager().registerEvents(new AnonymityListener(manager), this);
+        getServer().getPluginManager().registerEvents(new DashListener(manager), this);
 
-        manager.startParticleTask();
+        manager.startTickTask();
 
         getLogger().info("Anonymity enabled.");
     }

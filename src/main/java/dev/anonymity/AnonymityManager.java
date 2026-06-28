@@ -1,22 +1,30 @@
 package dev.anonymity;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * Owns all anonymous-mode state and the logic to apply and undo it:
- * scrambled name (chat / tab / nameplate), hidden skin, the enchantment aura
- * and the data the death listener needs.
+ * scrambled name (chat / tab / nameplate), hidden skin, the red-cloud aura,
+ * infinite Strength/Speed buffs, the trimmed netherite armour and the data the
+ * death and dash listeners need.
  */
 public final class AnonymityManager {
 
@@ -25,31 +33,36 @@ public final class AnonymityManager {
     private final Particle auraParticle;
 
     private final Map<UUID, AnonymousState> active = new HashMap<>();
-    private BukkitTask particleTask;
+    private BukkitTask tickTask;
 
     AnonymityManager(AnonymityPlugin plugin) {
         this.plugin = plugin;
         this.skinApplier = new SkinApplier(plugin);
-        this.auraParticle = resolveEnchantParticle();
+        this.auraParticle = resolveDustParticle();
     }
 
     /** Per-player snapshot so everything can be cleanly reverted. */
     private static final class AnonymousState {
         final String token;
         final String scrambled;
-        final Object originalTextures; // opaque authlib Property; null if none set
+        final Object originalTextures;     // opaque authlib Property; null if none set
         final String originalDisplayName;
         final String originalListName;
         final String teamName;
+        final ItemStack[] originalArmor;   // {helmet, chest, legs, boots}; entries may be null
+        final ItemStack[] fakeArmor;       // the disguise set we put on, same order
 
         AnonymousState(String token, String scrambled, Object originalTextures,
-                       String originalDisplayName, String originalListName, String teamName) {
+                       String originalDisplayName, String originalListName, String teamName,
+                       ItemStack[] originalArmor, ItemStack[] fakeArmor) {
             this.token = token;
             this.scrambled = scrambled;
             this.originalTextures = originalTextures;
             this.originalDisplayName = originalDisplayName;
             this.originalListName = originalListName;
             this.teamName = teamName;
+            this.originalArmor = originalArmor;
+            this.fakeArmor = fakeArmor;
         }
     }
 
@@ -62,7 +75,7 @@ public final class AnonymityManager {
     /** @return {@code true} if the player is now anonymous, {@code false} if reverted. */
     public boolean toggle(Player player) {
         if (isAnonymous(player)) {
-            disable(player);
+            restore(player, true, true);
             return false;
         }
         enable(player);
@@ -78,11 +91,25 @@ public final class AnonymityManager {
         Object originalTextures = skinApplier.captureTextures(player);
         String originalDisplay = player.getDisplayName();
         String originalList = player.getPlayerListName();
-
         String teamName = applyNameplate(player);
 
-        active.put(player.getUniqueId(), new AnonymousState(
-                token, scrambled, originalTextures, originalDisplay, originalList, teamName));
+        // Armour swap (store the player's own armour to restore later).
+        PlayerInventory inv = player.getInventory();
+        ItemStack[] originalArmor = {
+                clone(inv.getHelmet()), clone(inv.getChestplate()),
+                clone(inv.getLeggings()), clone(inv.getBoots())
+        };
+        ItemStack[] fakeArmor = null;
+        if (plugin.getConfig().getBoolean("armor.enabled", true)) {
+            fakeArmor = AnonymousGear.buildArmor();
+            inv.setHelmet(fakeArmor[0]);
+            inv.setChestplate(fakeArmor[1]);
+            inv.setLeggings(fakeArmor[2]);
+            inv.setBoots(fakeArmor[3]);
+        }
+
+        active.put(player.getUniqueId(), new AnonymousState(token, scrambled, originalTextures,
+                originalDisplay, originalList, teamName, originalArmor, fakeArmor));
 
         // Scramble the name everywhere Bukkit lets us: chat and tab list.
         player.setDisplayName(scrambled);
@@ -95,10 +122,19 @@ public final class AnonymityManager {
             skinApplier.apply(player, value, signature);
         }
 
+        applyEffects(player);
+
         player.sendMessage("§5You are now §k" + token + "§r§5. Nobody knows who you are.");
     }
 
-    private void disable(Player player) {
+    /**
+     * Reverts everything anonymous-mode applied.
+     *
+     * @param armorToPlayer put the player's own armour back on them (false when
+     *                      they're dead - the death handler manages drops instead)
+     * @param notify        send the "visible again" chat message
+     */
+    private void restore(Player player, boolean armorToPlayer, boolean notify) {
         AnonymousState state = active.remove(player.getUniqueId());
         if (state == null) {
             return;
@@ -106,40 +142,70 @@ public final class AnonymityManager {
 
         player.setDisplayName(state.originalDisplayName);
         player.setPlayerListName(state.originalListName);
-
         clearNameplate(player, state.teamName);
-
-        // Restore the original skin (or clear ours if they had none).
         skinApplier.restore(player, state.originalTextures);
+        removeEffects(player);
 
-        player.sendMessage("§5You are visible again.");
+        if (armorToPlayer && state.fakeArmor != null) {
+            PlayerInventory inv = player.getInventory();
+            inv.setHelmet(state.originalArmor[0]);
+            inv.setChestplate(state.originalArmor[1]);
+            inv.setLeggings(state.originalArmor[2]);
+            inv.setBoots(state.originalArmor[3]);
+        }
+
+        if (notify) {
+            player.sendMessage("§5You are visible again.");
+        }
     }
 
     /** Reverts every anonymous player; used on plugin disable. */
     public void restoreAll() {
-        if (particleTask != null) {
-            particleTask.cancel();
-            particleTask = null;
+        if (tickTask != null) {
+            tickTask.cancel();
+            tickTask = null;
         }
         for (UUID id : Map.copyOf(active).keySet()) {
             Player player = Bukkit.getPlayer(id);
             if (player != null) {
-                disable(player);
+                restore(player, true, false);
             } else {
                 active.remove(id);
             }
         }
     }
 
-    /** Drops state for a player who logged off (no entity to restore). */
+    /** Logout: restore the player's own armour/effects so nothing is lost, quietly. */
     void forget(Player player) {
-        AnonymousState state = active.remove(player.getUniqueId());
-        if (state != null) {
-            clearNameplate(player, state.teamName);
-        }
+        restore(player, true, false);
     }
 
-    // ------------------------------------------------------------ death names
+    // ------------------------------------------------------------ death
+
+    /**
+     * On death we don't drop the disguise armour or keep the player's real gear:
+     * the fake pieces are removed from the drops and the player's own armour is
+     * dropped in their place, then anonymous mode ends.
+     */
+    public void handleDeath(Player player, List<ItemStack> drops) {
+        AnonymousState state = active.get(player.getUniqueId());
+        if (state == null) {
+            return;
+        }
+        if (state.fakeArmor != null) {
+            for (ItemStack fake : state.fakeArmor) {
+                if (fake != null) {
+                    drops.removeIf(drop -> drop != null && drop.isSimilar(fake));
+                }
+            }
+            for (ItemStack original : state.originalArmor) {
+                if (original != null && original.getType() != Material.AIR) {
+                    drops.add(original.clone());
+                }
+            }
+        }
+        restore(player, false, false);
+    }
 
     /**
      * If the player is anonymous, returns their scrambled name; otherwise the
@@ -154,24 +220,61 @@ public final class AnonymityManager {
         return plugin.getConfig().getBoolean("death-messages", true);
     }
 
+    // ------------------------------------------------------------ effects
+
+    private void applyEffects(Player player) {
+        if (!plugin.getConfig().getBoolean("effects.enabled", true)) {
+            return;
+        }
+        int strength = plugin.getConfig().getInt("effects.strength-amplifier", 1);
+        int speed = plugin.getConfig().getInt("effects.speed-amplifier", 1);
+        // ambient=false, particles=false (hidden), icon=false.
+        player.addPotionEffect(new PotionEffect(
+                PotionEffectType.STRENGTH, PotionEffect.INFINITE_DURATION, strength, false, false, false));
+        player.addPotionEffect(new PotionEffect(
+                PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, speed, false, false, false));
+    }
+
+    private void removeEffects(Player player) {
+        player.removePotionEffect(PotionEffectType.STRENGTH);
+        player.removePotionEffect(PotionEffectType.SPEED);
+    }
+
+    // ------------------------------------------------------------ dash
+
+    public boolean dashEnabled() {
+        return plugin.getConfig().getBoolean("dash.enabled", true);
+    }
+
+    public double dashPower() {
+        return plugin.getConfig().getDouble("dash.power", 1.6);
+    }
+
+    public double dashVertical() {
+        return plugin.getConfig().getDouble("dash.vertical-boost", 0.3);
+    }
+
+    public long dashCooldownMs() {
+        return plugin.getConfig().getLong("dash.cooldown-ms", 1500L);
+    }
+
+    /** A short red-cloud puff at the player's feet, used as dash feedback. */
+    void dashPuff(Player player) {
+        if (auraParticle == null) {
+            return;
+        }
+        player.getWorld().spawnParticle(auraParticle, player.getLocation(), 18,
+                0.3, 0.2, 0.3, 0.0, dustOptions());
+    }
+
     // -------------------------------------------------------------- nameplate
 
-    /**
-     * Hides the player's over-head nametag entirely while anonymous, via a
-     * scoreboard team with {@code NAME_TAG_VISIBILITY = NEVER}. (The Bukkit API
-     * can't replace the nameplate text without a packet library, so rather than
-     * leak the real username we hide it; the scrambled name still shows in chat,
-     * the tab list and death messages.)
-     *
-     * @return the created team name, for later cleanup.
-     */
     private String applyNameplate(Player player) {
         Scoreboard scoreboard = player.getScoreboard();
         String teamName = "anon_" + Integer.toHexString(player.getUniqueId().hashCode());
         if (teamName.length() > 16) {
             teamName = teamName.substring(0, 16);
         }
-
         Team team = scoreboard.getTeam(teamName);
         if (team == null) {
             team = scoreboard.registerNewTeam(teamName);
@@ -196,37 +299,56 @@ public final class AnonymityManager {
 
     // --------------------------------------------------------------- aura
 
-    void startParticleTask() {
-        if (!plugin.getConfig().getBoolean("particles.enabled", true) || auraParticle == null) {
-            return;
-        }
+    void startTickTask() {
         long interval = Math.max(1L, plugin.getConfig().getLong("particles.interval-ticks", 4L));
         int count = Math.max(1, plugin.getConfig().getInt("particles.count", 10));
         double radius = plugin.getConfig().getDouble("particles.radius", 0.6);
+        boolean particles = plugin.getConfig().getBoolean("particles.enabled", true) && auraParticle != null;
 
-        particleTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (UUID id : active.keySet()) {
                 Player player = Bukkit.getPlayer(id);
                 if (player == null || !player.isOnline()) {
                     continue;
                 }
-                World world = player.getWorld();
-                Location center = player.getLocation().add(0, 1.0, 0);
-                world.spawnParticle(auraParticle, center, count, radius, radius, radius, 0.0);
+                // Keep the infinite buffs topped up in case something cleared them.
+                applyEffects(player);
+                if (particles) {
+                    World world = player.getWorld();
+                    Location center = player.getLocation().add(0, 1.0, 0);
+                    world.spawnParticle(auraParticle, center, count, radius, radius, radius, 0.0, dustOptions());
+                }
             }
         }, interval, interval);
     }
 
-    /** Enchantment-table particles: {@code ENCHANT} on 1.20.5+, else {@code ENCHANTMENT_TABLE}. */
-    private Particle resolveEnchantParticle() {
-        for (String name : new String[] {"ENCHANT", "ENCHANTMENT_TABLE"}) {
+    /** Builds the configured red dust colour/size for the aura and dash puff. */
+    private Particle.DustOptions dustOptions() {
+        int r = clampColor(plugin.getConfig().getInt("particles.color.red", 200));
+        int g = clampColor(plugin.getConfig().getInt("particles.color.green", 0));
+        int b = clampColor(plugin.getConfig().getInt("particles.color.blue", 0));
+        float size = (float) plugin.getConfig().getDouble("particles.size", 1.5);
+        return new Particle.DustOptions(Color.fromRGB(r, g, b), size);
+    }
+
+    private static int clampColor(int v) {
+        return Math.max(0, Math.min(255, v));
+    }
+
+    /** Red dust particle: {@code DUST} on modern versions, else {@code REDSTONE}. */
+    private Particle resolveDustParticle() {
+        for (String name : new String[] {"DUST", "REDSTONE"}) {
             try {
                 return Particle.valueOf(name);
             } catch (IllegalArgumentException ignored) {
                 // Try the other spelling.
             }
         }
-        plugin.getLogger().warning("No enchantment particle found on this server version; aura disabled.");
+        plugin.getLogger().warning("No dust particle found on this server version; aura disabled.");
         return null;
+    }
+
+    private static ItemStack clone(ItemStack item) {
+        return item == null ? null : item.clone();
     }
 }

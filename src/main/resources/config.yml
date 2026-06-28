@@ -18,7 +18,7 @@ name:
   min-length: 7
   max-length: 9
 
-# The enchantment-table particle aura that surrounds an anonymous player.
+# The red-cloud particle aura that surrounds an anonymous player.
 particles:
   enabled: true
   # How often to emit a burst, in server ticks (20 ticks = 1 second).
@@ -27,6 +27,31 @@ particles:
   count: 10
   # Horizontal/vertical spread of the aura around the body.
   radius: 0.6
+  # Red cloud (dust) colour and size.
+  color:
+    red: 200
+    green: 0
+    blue: 0
+  size: 1.5
+
+# Infinite combat buffs while anonymous. Potion particles are hidden.
+effects:
+  enabled: true
+  strength-amplifier: 1   # 0 = Strength I, 1 = Strength II
+  speed-amplifier: 1      # 0 = Speed I, 1 = Speed II
+
+# Sneak (hold shift) to dash forward while anonymous. The dash is a ~1 second
+# velocity burst in the direction you are looking.
+dash:
+  enabled: true
+  power: 1.6              # horizontal launch strength
+  vertical-boost: 0.3    # small upward kick so you don't faceplant
+  cooldown-ms: 1500
+
+# Replace the player's armour with a trimmed netherite set while anonymous,
+# restoring their own armour when they leave anonymous mode.
+armor:
+  enabled: true
 
 # Rewrite death messages so an anonymous killer (or victim) shows the
 # scrambled name instead of their real username.

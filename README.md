@@ -4,11 +4,19 @@ A Paper/Spigot plugin that adds a single command, **`/anonymous`** (alias `/anon
 which toggles "anonymous mode" on yourself:
 
 - **Scrambled name** — your name renders as ever-changing *unintelligible letters*
-  (the Minecraft magic/obfuscated formatting code) in chat, the tab list and above
-  your head.
+  (the Minecraft magic/obfuscated formatting code) in chat, the tab list and death
+  messages. Your over-head nametag is hidden so your real username never leaks.
 - **Hidden skin** — your skin is swapped to
   [_lotu's skin](https://namemc.com/skin/35e202697eb4000e) so nobody recognises you.
-- **Enchantment aura** — enchantment-table particles continuously pour off your body.
+- **Red-cloud aura** — red dust particles continuously pour off your body.
+- **Combat buffs** — infinite **Strength II** and **Speed II**, with the potion
+  particles hidden.
+- **Sneak to dash** — tap shift to dash forward (a ~1 second velocity burst in the
+  direction you're looking), with a short cooldown.
+- **Disguise armour** — your armour is replaced with a trimmed netherite set
+  (Vex/Raiser/Tide trims, Redstone material, Protection/Unbreaking/Mending, and
+  Feather Falling on the boots) and your own armour is restored when you leave
+  anonymous mode.
 - **Anonymous kills** — when you kill someone, the death message shows your
   scrambled name instead of your username.
 

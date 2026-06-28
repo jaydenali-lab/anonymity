@@ -20,27 +20,28 @@ final class AnonymityListener implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
-        if (!shouldRewriteDeaths()) {
-            return;
-        }
-        String message = event.getDeathMessage();
-        if (message == null || message.isEmpty()) {
-            return;
-        }
-
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
 
-        // Replace any anonymous participant's real username with their scrambled
-        // name. Vanilla phrasing (and the weapon, if any) is preserved.
-        if (killer != null && manager.isAnonymous(killer)) {
-            message = message.replace(killer.getName(), manager.displayNameFor(killer));
-        }
-        if (manager.isAnonymous(victim)) {
-            message = message.replace(victim.getName(), manager.displayNameFor(victim));
+        // Rewrite the death message first - it needs the scrambled names while
+        // the players are still marked anonymous.
+        if (shouldRewriteDeaths()) {
+            String message = event.getDeathMessage();
+            if (message != null && !message.isEmpty()) {
+                if (killer != null && manager.isAnonymous(killer)) {
+                    message = message.replace(killer.getName(), manager.displayNameFor(killer));
+                }
+                if (manager.isAnonymous(victim)) {
+                    message = message.replace(victim.getName(), manager.displayNameFor(victim));
+                }
+                event.setDeathMessage(message);
+            }
         }
 
-        event.setDeathMessage(message);
+        // Then handle the disguise armour in the drops and end anonymity.
+        if (manager.isAnonymous(victim)) {
+            manager.handleDeath(victim, event.getDrops());
+        }
     }
 
     @EventHandler
