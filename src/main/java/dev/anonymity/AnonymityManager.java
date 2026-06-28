@@ -1,6 +1,5 @@
 package dev.anonymity;
 
-import com.mojang.authlib.properties.Property;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -38,12 +37,12 @@ public final class AnonymityManager {
     private static final class AnonymousState {
         final String token;
         final String scrambled;
-        final Property originalTextures; // null if the player had no skin set
+        final Object originalTextures; // opaque authlib Property; null if none set
         final String originalDisplayName;
         final String originalListName;
         final String teamName;
 
-        AnonymousState(String token, String scrambled, Property originalTextures,
+        AnonymousState(String token, String scrambled, Object originalTextures,
                        String originalDisplayName, String originalListName, String teamName) {
             this.token = token;
             this.scrambled = scrambled;
@@ -76,7 +75,7 @@ public final class AnonymityManager {
         String token = NameObfuscator.newToken(min, max);
         String scrambled = NameObfuscator.scramble(token);
 
-        Property originalTextures = skinApplier.captureTextures(player);
+        Object originalTextures = skinApplier.captureTextures(player);
         String originalDisplay = player.getDisplayName();
         String originalList = player.getPlayerListName();
 
