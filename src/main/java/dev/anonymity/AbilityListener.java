@@ -1,29 +1,27 @@
 package dev.anonymity;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Snowball;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -49,7 +47,6 @@ final class AbilityListener implements Listener {
     private final AnonymityPlugin plugin;
     private final AnonymityManager manager;
     private final Map<String, Ability> registry = new LinkedHashMap<>();
-    private final NamespacedKey tetherKey;
 
     // Per-key cooldowns and ability state.
     private final Map<UUID, Long> cooldownSneak = new java.util.HashMap<>();
@@ -62,8 +59,72 @@ final class AbilityListener implements Listener {
     AbilityListener(AnonymityPlugin plugin, AnonymityManager manager) {
         this.plugin = plugin;
         this.manager = manager;
-        this.tetherKey = new NamespacedKey(plugin, "tether");
         buildRegistry();
+        startHud();
+    }
+
+    // --------------------------------------------------- ability cooldown HUD
+
+    private void startHud() {
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            String swapId = plugin.getConfig().getString("abilities.swap-hand", "tether");
+            String sneakId = plugin.getConfig().getString("abilities.sneak", "stun");
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!manager.isAnonymous(player)) {
+                    continue;
+                }
+                String text = hudEntry(swapId, cooldownSwap, player) + " §8|§r " + hudEntry(sneakId, cooldownSneak, player);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(text));
+            }
+        }, 20L, 10L);
+    }
+
+    private String hudEntry(String id, Map<UUID, Long> cooldowns, Player player) {
+        long now = System.currentTimeMillis();
+        String status;
+        Long armed = stunCharge.get(player.getUniqueId());
+        if (id.equals("stun") && armed != null && now < armed) {
+            // Stun is armed and waiting for a hit.
+            status = "§eACTIVE";
+        } else {
+            Long last = cooldowns.get(player.getUniqueId());
+            long remaining = last == null ? 0 : Math.max(0, cooldownMs(id) - (now - last));
+            status = remaining <= 0 ? "§aREADY" : "§c" + (int) Math.ceil(remaining / 1000.0) + "s";
+        }
+        return abilityColor(id) + abilityIcon(id) + " " + abilityLabel(id) + " " + status;
+    }
+
+    private String abilityIcon(String id) {
+        return switch (id) {
+            case "tether" -> "➤";   // ➤
+            case "stun" -> "⛓";     // ⛓
+            default -> "✦";         // ✦
+        };
+    }
+
+    private String abilityLabel(String id) {
+        return switch (id) {
+            case "tether" -> "Tether";
+            case "stun" -> "Bind";
+            default -> {
+                String[] parts = id.split("_");
+                StringBuilder sb = new StringBuilder();
+                for (String p : parts) {
+                    if (!p.isEmpty()) {
+                        sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1)).append(' ');
+                    }
+                }
+                yield sb.toString().trim();
+            }
+        };
+    }
+
+    private String abilityColor(String id) {
+        return switch (id) {
+            case "tether" -> "§b";
+            case "stun" -> "§d";
+            default -> "§f";
+        };
     }
 
     private void buildRegistry() {
@@ -119,7 +180,7 @@ final class AbilityListener implements Listener {
             return;
         }
         long now = System.currentTimeMillis();
-        long cd = plugin.getConfig().getLong("abilities.cooldown-ms", 2500L);
+        long cd = cooldownMs(ability.id());
         Long previous = cooldowns.get(player.getUniqueId());
         if (previous != null && now - previous < cd) {
             return;
@@ -132,15 +193,83 @@ final class AbilityListener implements Listener {
         }
     }
 
+    /** Cooldown for an ability in milliseconds (per-ability config, else a default). */
+    private long cooldownMs(String id) {
+        if (plugin.getConfig().contains("abilities.cooldowns." + id)) {
+            return Math.max(0L, plugin.getConfig().getLong("abilities.cooldowns." + id) * 1000L);
+        }
+        return switch (id) {
+            case "tether" -> 30000L;
+            case "stun" -> 20000L;
+            default -> plugin.getConfig().getLong("abilities.cooldown-ms", 2500L);
+        };
+    }
+
     // ----------------------------------------------------------- combat
 
+    /** A straight, instant laser: hits the first entity in your line of sight and yanks it back. */
     private void tether(Player player) {
-        double speed = plugin.getConfig().getDouble("tether.speed", 1.8);
-        Snowball ball = player.launchProjectile(Snowball.class,
-                player.getLocation().getDirection().normalize().multiply(speed));
-        ball.getPersistentDataContainer().set(tetherKey, PersistentDataType.BYTE, (byte) 1);
-        sound(player, "minecraft:item.crossbow.shoot", 1.0f, 1.3f);
-        manager.trailProjectile(ball);
+        Location eye = player.getEyeLocation();
+        Vector dir = eye.getDirection().normalize();
+        double maxRange = plugin.getConfig().getDouble("tether.range", 40.0);
+
+        RayTraceResult blockHit = player.getWorld().rayTraceBlocks(eye, dir, maxRange);
+        double maxDist = blockHit != null ? eye.toVector().distance(blockHit.getHitPosition()) : maxRange;
+        RayTraceResult entityHit = player.getWorld().rayTraceEntities(eye, dir, maxDist, 0.4,
+                e -> e instanceof LivingEntity && !e.equals(player));
+
+        LivingEntity target = entityHit != null && entityHit.getHitEntity() instanceof LivingEntity le ? le : null;
+        Location end;
+        if (target != null) {
+            end = target.getLocation().add(0, target.getHeight() * 0.5, 0);
+        } else if (blockHit != null) {
+            end = blockHit.getHitPosition().toLocation(player.getWorld());
+        } else {
+            end = eye.clone().add(dir.clone().multiply(maxRange));
+        }
+
+        drawBeam(eye, end);
+        sound(player, "minecraft:entity.guardian.attack", 1.0f, 1.5f);
+        sound(player, "minecraft:item.crossbow.shoot", 0.6f, 1.6f);
+        if (target != null) {
+            pullToShooter(target, player);
+        }
+    }
+
+    /** Red dust beam in a straight line from a to b. */
+    private void drawBeam(Location from, Location to) {
+        Particle dust = manager.dustParticle();
+        if (dust == null) {
+            return;
+        }
+        Particle.DustOptions options = manager.dustOptions();
+        Vector full = to.toVector().subtract(from.toVector());
+        double length = full.length();
+        if (length < 0.01) {
+            return;
+        }
+        Vector step = full.normalize().multiply(0.3);
+        Location point = from.clone();
+        for (double d = 0; d < length; d += 0.3) {
+            from.getWorld().spawnParticle(dust, point, 1, 0, 0, 0, 0, options);
+            point.add(step);
+        }
+    }
+
+    /** Fast fishing-rod style yank of a target straight back to the shooter. */
+    private void pullToShooter(LivingEntity target, Player shooter) {
+        Vector toShooter = shooter.getLocation().toVector().subtract(target.getLocation().toVector());
+        double distance = toShooter.length();
+        if (distance < 0.1) {
+            return;
+        }
+        // Tuned so the target lands on/near you fast, without rocketing past.
+        double base = Math.max(0.8, Math.min(distance * 0.35, 3.0));
+        Vector velocity = toShooter.normalize().multiply(base * plugin.getConfig().getDouble("tether.pull-strength", 1.1));
+        velocity.setY(velocity.getY() * 0.4 + 0.15);
+        target.setVelocity(velocity);
+        target.getWorld().playSound(target.getLocation(), "minecraft:entity.fishing_bobber.retrieve", 1.0f, 0.6f);
+        manager.dustBurst(target.getLocation().add(0, 1, 0), 16);
     }
 
     private void empoweredStrike(Player player) {
@@ -178,20 +307,20 @@ final class AbilityListener implements Listener {
         }
     }
 
-    /** Arms the player's next melee hit to root the target in place. */
+    /** Arms the player's next melee hit to root the target in place. (No chat, just sfx.) */
     private void armStun(Player player) {
         stunCharge.put(player.getUniqueId(), System.currentTimeMillis() + 6000L);
         sound(player, "minecraft:block.chain.place", 1.0f, 1.4f);
         sound(player, "minecraft:block.enchantment_table.use", 0.7f, 1.6f);
         manager.dustBurst(player.getLocation().add(0, 1, 0), 20);
-        player.sendMessage("§5Your next hit will bind your target in place.");
     }
 
     /** Roots a victim where they stand for 1.5s inside a cage of chain particles. */
     private void applyStun(LivingEntity victim) {
         final int ticks = 30; // 1.5 seconds
         final Location lock = victim.getLocation().clone();
-        victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks, 250, false, false, false));
+        // No slowness effect at all - the per-tick position lock holds them, so
+        // nothing (icon or particles) shows on the victim.
         final boolean mob = victim instanceof Mob;
         if (mob) {
             ((Mob) victim).setAI(false);
@@ -406,33 +535,6 @@ final class AbilityListener implements Listener {
     }
 
     // ----------------------------------------------------- side effects
-
-    @EventHandler
-    public void onTetherHit(ProjectileHitEvent event) {
-        if (!(event.getEntity() instanceof Snowball ball)) {
-            return;
-        }
-        if (ball.getPersistentDataContainer().get(tetherKey, PersistentDataType.BYTE) == null) {
-            return;
-        }
-        ProjectileSource source = ball.getShooter();
-        if (!(event.getHitEntity() instanceof LivingEntity target) || !(source instanceof Player shooter)
-                || target.equals(shooter)) {
-            return;
-        }
-        Vector toShooter = shooter.getLocation().toVector().subtract(target.getLocation().toVector());
-        double distance = toShooter.length();
-        if (distance < 0.1) {
-            return;
-        }
-        // Fast fishing-rod style yank: strong, distance-scaled, low arc.
-        double base = Math.max(1.6, Math.min(distance * 0.5, 4.5));
-        Vector velocity = toShooter.normalize().multiply(base * plugin.getConfig().getDouble("tether.pull-strength", 1.3));
-        velocity.setY(velocity.getY() * 0.4 + 0.2);
-        target.setVelocity(velocity);
-        target.getWorld().playSound(target.getLocation(), "minecraft:entity.fishing_bobber.retrieve", 1.0f, 0.6f);
-        manager.dustBurst(target.getLocation().add(0, 1, 0), 16);
-    }
 
     @EventHandler
     public void onDamage(EntityDamageByEntityEvent event) {

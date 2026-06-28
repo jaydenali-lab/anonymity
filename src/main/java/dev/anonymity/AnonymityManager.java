@@ -143,7 +143,7 @@ public final class AnonymityManager {
         }
 
         applyEffects(player);
-        player.sendMessage("§5You are now §k" + token + "§r§5. Nobody knows who you are.");
+        player.sendMessage("§cNobody knows.");
     }
 
     /**
@@ -172,7 +172,7 @@ public final class AnonymityManager {
             inv.setBoots(state.originalArmor[3]);
         }
         if (notify) {
-            player.sendMessage("§5You are visible again.");
+            player.sendMessage("§cWelcome back, " + player.getName() + ".");
         }
     }
 
