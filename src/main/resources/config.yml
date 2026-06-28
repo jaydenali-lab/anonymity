@@ -46,13 +46,22 @@ effects:
   strength-amplifier: 1   # 0 = Strength I, 1 = Strength II
   speed-amplifier: 1      # 0 = Speed I, 1 = Speed II
 
-# Tether: press the swap-hands key (F) while anonymous to fire a projectile
-# that yanks the hit player or mob back toward you.
+# Abilities. While anonymous, the Sneak key and the swap-hands (F) key each
+# trigger one ability of your choice. Set the ability id for each below.
+#
+# Available abilities:
+#   combat:    tether, empowered_strike, chain_lightning, venom_burst, ground_slam
+#   mobility:  super_leap, shadow_blink, grappling_hook, speed_surge, disengage
+#   trickster: vanish, smoke_bomb, decoy_clone, mimic, mark_for_death
+abilities:
+  sneak: ground_slam
+  swap-hand: tether
+  cooldown-ms: 2500
+
+# Tuning for the tether ability specifically.
 tether:
-  enabled: true
   speed: 1.8           # projectile launch speed
   pull-strength: 1.0   # multiplier on the yank (scaled by distance)
-  cooldown-ms: 2000
 
 # Replace the player's armour with a trimmed netherite set while anonymous,
 # restoring their own armour when they leave anonymous mode.

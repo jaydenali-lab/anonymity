@@ -69,6 +69,11 @@ final class SkinApplier {
         setTextures(player, originalProperty);
     }
 
+    /** Applies a raw captured texture property (used to copy another player's skin). */
+    void applyRaw(Player player, Object property) {
+        setTextures(player, property);
+    }
+
     private void setTextures(Player player, Object propertyOrNull) {
         Object map = propertyMapOf(player);
         if (map == null) {

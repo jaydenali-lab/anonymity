@@ -24,9 +24,11 @@ Anonymous mode does the following:
   reverse when you turn it off), with layered wind-up/explosion sounds.
 - **Combat buffs** — infinite **Strength II** and **Speed II**, with the potion
   particles hidden.
-- **Tether** — press the swap-hands key (F) to fire a projectile that yanks the
-  hit player or mob back toward you (with a red trail and a reel-in sound); short
-  cooldown.
+- **Abilities** — bind any of 15 abilities to the Sneak key and the swap-hands (F)
+  key (in `config.yml`), each on a cooldown:
+  - *Combat:* `tether`, `empowered_strike`, `chain_lightning`, `venom_burst`, `ground_slam`
+  - *Mobility:* `super_leap`, `shadow_blink`, `grappling_hook`, `speed_surge`, `disengage`
+  - *Trickster:* `vanish`, `smoke_bomb`, `decoy_clone`, `mimic`, `mark_for_death`
 - **Disguise armour** — your armour is replaced with a trimmed netherite set
   (Vex/Raiser/Tide trims, Redstone material, Protection/Unbreaking/Mending, and
   Feather Falling on the boots) and your own armour is restored when you leave

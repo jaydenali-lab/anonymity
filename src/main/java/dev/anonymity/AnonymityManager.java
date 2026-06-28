@@ -285,6 +285,14 @@ public final class AnonymityManager {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    /** Copies another player's skin and name onto this player (the Mimic ability). */
+    public void mimic(Player self, Player target) {
+        Object texture = skinApplier.captureTextures(target);
+        skinApplier.applyRaw(self, texture);
+        self.setDisplayName(target.getName());
+        self.setPlayerListName(target.getName());
+    }
+
     /** A small red dust burst, used when a tether yanks its target. */
     void dustBurst(Location location, int count) {
         if (dustParticle == null) {
