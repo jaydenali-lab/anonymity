@@ -18,6 +18,9 @@ final class FragmentItem {
 
     static final String DISPLAY_NAME = "§r§cFragment Of Anonymity";
 
+    /** Pack hook: items with this custom-model-data render the red texture. */
+    static final int MODEL_DATA = 1;
+
     private final NamespacedKey key;
 
     FragmentItem(Plugin plugin) {
@@ -31,6 +34,9 @@ final class FragmentItem {
         meta.setDisplayName(DISPLAY_NAME);
         meta.setLore(List.of("§7Right-click to slip into", "§7or out of anonymity."));
         meta.setEnchantmentGlintOverride(true); // glow without a real enchant
+        // Custom model data the resource pack keys off to show the red texture.
+        // Without the pack the item just renders as a normal amethyst shard.
+        meta.setCustomModelData(MODEL_DATA);
         meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;

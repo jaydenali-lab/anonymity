@@ -5,6 +5,12 @@ amethyst shard. Right-click it to toggle "anonymous mode" on yourself. Operators
 get one with `/fragment`. The Fragment never drops on death (it vanishes, like
 Curse of Vanishing but without the visible enchant).
 
+For a genuinely **red** Fragment texture, apply the optional resource pack in
+[`resourcepack/`](resourcepack/) (Minecraft can't recolor item textures from the
+server alone). It recolors only the Fragment; without the pack the item still
+works, it just looks like a normal amethyst shard with a red name. See
+[`resourcepack/README.md`](resourcepack/README.md) for setup.
+
 Anonymous mode does the following:
 
 - **Scrambled name** — your name renders as ever-changing *unintelligible letters*
