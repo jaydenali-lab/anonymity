@@ -32,7 +32,7 @@ public final class AnonymityManager {
     private final SkinApplier skinApplier;
     private final CutsceneRunner cutscene;
     private final Particle auraParticle;       // enchantment table (idle aura)
-    private final Particle dustParticle;       // red dust (dash trail + cutscene)
+    private final Particle dustParticle;       // red dust (tether trail + cutscene)
     private final Particle explosionParticle;  // cutscene flash
 
     private final Map<UUID, AnonymousState> active = new HashMap<>();
@@ -264,44 +264,33 @@ public final class AnonymityManager {
         player.removePotionEffect(PotionEffectType.SPEED);
     }
 
-    // ------------------------------------------------------------ dash
+    // ------------------------------------------------------------ tether
 
-    public boolean dashEnabled() {
-        return plugin.getConfig().getBoolean("dash.enabled", true);
-    }
-
-    public double dashPower() {
-        return plugin.getConfig().getDouble("dash.power", 1.6);
-    }
-
-    public double dashVertical() {
-        return plugin.getConfig().getDouble("dash.vertical-boost", 0.3);
-    }
-
-    public long dashCooldownMs() {
-        return plugin.getConfig().getLong("dash.cooldown-ms", 1500L);
-    }
-
-    /** Whoosh sound plus a trail of red particles that follows the player. */
-    void dashEffects(Player player) {
-        player.getWorld().playSound(player.getLocation(), "minecraft:entity.player.attack.sweep", 1.0f, 1.2f);
-        player.getWorld().playSound(player.getLocation(), "minecraft:entity.ender_dragon.flap", 0.7f, 1.6f);
+    /** A red dust trail that follows a flying projectile until it lands. */
+    void trailProjectile(org.bukkit.entity.Projectile projectile) {
         if (dustParticle == null) {
             return;
         }
-        int ticks = Math.max(1, plugin.getConfig().getInt("dash.trail-ticks", 20));
         new BukkitRunnable() {
             int t = 0;
             @Override
             public void run() {
-                if (t++ >= ticks || !player.isOnline() || !isAnonymous(player)) {
+                if (t++ > 80 || projectile.isDead() || !projectile.isValid()) {
                     cancel();
                     return;
                 }
-                player.getWorld().spawnParticle(dustParticle, player.getLocation().add(0, 0.3, 0),
-                        6, 0.2, 0.25, 0.2, 0.0, dustOptions());
+                projectile.getWorld().spawnParticle(dustParticle, projectile.getLocation(),
+                        4, 0.05, 0.05, 0.05, 0.0, dustOptions());
             }
         }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    /** A small red dust burst, used when a tether yanks its target. */
+    void dustBurst(Location location, int count) {
+        if (dustParticle == null) {
+            return;
+        }
+        location.getWorld().spawnParticle(dustParticle, location, count, 0.3, 0.4, 0.3, 0.0, dustOptions());
     }
 
     // ----------------------------------------------------- particle helpers

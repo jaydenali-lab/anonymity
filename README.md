@@ -24,9 +24,9 @@ Anonymous mode does the following:
   reverse when you turn it off), with layered wind-up/explosion sounds.
 - **Combat buffs** — infinite **Strength II** and **Speed II**, with the potion
   particles hidden.
-- **Sneak to dash** — tap shift to dash forward (a ~1 second velocity burst in the
-  direction you're looking) with a whoosh sound and a trail of red particles
-  following you; short cooldown.
+- **Tether** — press the swap-hands key (F) to fire a projectile that yanks the
+  hit player or mob back toward you (with a red trail and a reel-in sound); short
+  cooldown.
 - **Disguise armour** — your armour is replaced with a trimmed netherite set
   (Vex/Raiser/Tide trims, Redstone material, Protection/Unbreaking/Mending, and
   Feather Falling on the boots) and your own armour is restored when you leave

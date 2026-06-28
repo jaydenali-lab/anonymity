@@ -27,7 +27,7 @@ particles:
   count: 10
   # Horizontal/vertical spread of the aura around the body.
   radius: 0.6
-  # Red dust colour/size used by the dash trail and the transform cutscene.
+  # Red dust colour/size used by the tether trail and the transform cutscene.
   color:
     red: 200
     green: 0
@@ -46,14 +46,13 @@ effects:
   strength-amplifier: 1   # 0 = Strength I, 1 = Strength II
   speed-amplifier: 1      # 0 = Speed I, 1 = Speed II
 
-# Sneak (hold shift) to dash forward while anonymous. The dash is a ~1 second
-# velocity burst in the direction you are looking.
-dash:
+# Tether: press the swap-hands key (F) while anonymous to fire a projectile
+# that yanks the hit player or mob back toward you.
+tether:
   enabled: true
-  power: 1.6              # horizontal launch strength
-  vertical-boost: 0.3    # small upward kick so you don't faceplant
-  cooldown-ms: 1500
-  trail-ticks: 20        # how long red particles follow you after a dash
+  speed: 1.8           # projectile launch speed
+  pull-strength: 1.0   # multiplier on the yank (scaled by distance)
+  cooldown-ms: 2000
 
 # Replace the player's armour with a trimmed netherite set while anonymous,
 # restoring their own armour when they leave anonymous mode.
