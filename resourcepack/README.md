@@ -13,7 +13,7 @@ release asset, Dropbox with `?dl=1`, etc.), then in `server.properties`:
 
 ```properties
 resource-pack=PASTE_DIRECT_DOWNLOAD_URL_HERE
-resource-pack-sha1=942500a024c83917dbd56da7cfad850b956e0b90
+resource-pack-sha1=d08823e9f5819650cd42592868722d397dacd7b4
 require-resource-pack=true
 ```
 
