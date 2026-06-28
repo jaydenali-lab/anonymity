@@ -41,8 +41,13 @@ final class DashListener implements Listener {
         }
         lastDash.put(player.getUniqueId(), now);
 
-        Vector direction = player.getLocation().getDirection().normalize().multiply(manager.dashPower());
-        direction.setY(Math.max(direction.getY() * 0.5, 0.0) + manager.dashVertical());
+        Vector look = player.getLocation().getDirection().normalize();
+        Vector direction = look.clone().multiply(manager.dashPower());
+        // Dash where you look - including downward. Only add the small upward kick
+        // when you're not aiming down, so flat-ground dashes don't faceplant.
+        if (look.getY() >= -0.1) {
+            direction.setY(direction.getY() + manager.dashVertical());
+        }
         player.setVelocity(direction);
         manager.dashEffects(player);
     }
