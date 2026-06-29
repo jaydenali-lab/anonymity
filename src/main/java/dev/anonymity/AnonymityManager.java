@@ -143,7 +143,19 @@ public final class AnonymityManager {
         }
 
         applyEffects(player);
+        broadcastFakeStatus(player, " left the game");
         player.sendMessage("§cNobody knows.");
+    }
+
+    /** Sends a vanilla-looking join/leave line to everyone except the player. */
+    private void broadcastFakeStatus(Player player, String suffix) {
+        String message = "§e" + player.getName() + suffix;
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (!viewer.equals(player)) {
+                viewer.sendMessage(message);
+            }
+        }
+        Bukkit.getConsoleSender().sendMessage(message);
     }
 
     /**
@@ -172,6 +184,7 @@ public final class AnonymityManager {
             inv.setBoots(state.originalArmor[3]);
         }
         if (notify) {
+            broadcastFakeStatus(player, " joined the game");
             player.sendMessage("§cWelcome back, " + player.getName() + ".");
         }
     }

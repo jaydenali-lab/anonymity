@@ -31,14 +31,17 @@ final class AnonymousGear {
     static ItemStack[] buildArmor() {
         return new ItemStack[] {
                 piece(Material.NETHERITE_HELMET, TrimPattern.VEX, enchants(
-                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1)),
+                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1,
+                        Enchantment.BINDING_CURSE, 1)),
                 piece(Material.NETHERITE_CHESTPLATE, TrimPattern.RAISER, enchants(
-                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1)),
+                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1,
+                        Enchantment.BINDING_CURSE, 1)),
                 piece(Material.NETHERITE_LEGGINGS, TrimPattern.TIDE, enchants(
-                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1)),
+                        Enchantment.UNBREAKING, 3, Enchantment.PROTECTION, 3, Enchantment.MENDING, 1,
+                        Enchantment.BINDING_CURSE, 1)),
                 piece(Material.NETHERITE_BOOTS, TrimPattern.TIDE, enchants(
                         Enchantment.FEATHER_FALLING, 4, Enchantment.PROTECTION, 3,
-                        Enchantment.UNBREAKING, 3, Enchantment.MENDING, 1)),
+                        Enchantment.UNBREAKING, 3, Enchantment.MENDING, 1, Enchantment.BINDING_CURSE, 1)),
         };
     }
 
